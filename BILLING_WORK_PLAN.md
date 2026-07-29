@@ -16,11 +16,11 @@ Use this checklist to finish the billing and RabbitMQ part of the project in a c
 
 ## Phase 3: RabbitMQ consumer
 
-- [ ] Connect the billing service to the `billing_queue` queue.
-- [ ] Parse the incoming JSON message body.
-- [ ] Validate the required fields before inserting a row.
-- [ ] Save the order in PostgreSQL after a message is received.
-- [ ] Acknowledge the RabbitMQ message only after the insert succeeds.
+- [x] Connect the billing service to the `billing_queue` queue.
+- [x] Parse the incoming JSON message body.
+- [x] Validate the required fields before inserting a row.
+- [x] Save the order in PostgreSQL after a message is received.
+- [x] Acknowledge the RabbitMQ message only after the insert succeeds.
 
 ## Phase 4: Queue resilience
 
