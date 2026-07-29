@@ -24,9 +24,9 @@ Use this checklist to finish the billing and RabbitMQ part of the project in a c
 
 ## Phase 4: Queue resilience
 
-- [ ] Configure the queue so messages are durable.
-- [ ] Make the consumer recover after a stop and restart.
-- [ ] Check that pending messages are processed after the billing service comes back online.
+- [x] Configure the queue so messages are durable.
+- [x] Make the consumer recover after a stop and restart.
+- [x] Check that pending messages are processed after the billing service comes back online.
 
 ## Phase 5: Gateway integration
 

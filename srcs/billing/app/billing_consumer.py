@@ -8,7 +8,7 @@ import time
 from typing import Any
 
 import pika
-from pika.exceptions import AMQPConnectionError, ChannelClosedByBroker
+from pika.exceptions import AMQPChannelError, AMQPConnectionError, AMQPError, ChannelClosedByBroker, StreamLostError
 
 from .database import insert_order
 
@@ -79,6 +79,8 @@ def _connection_parameters(app: Any) -> pika.ConnectionParameters:
 		host=app.config["BILLING_RABBITMQ_HOST"],
 		port=app.config["BILLING_RABBITMQ_PORT"],
 		credentials=credentials,
+		heartbeat=app.config["BILLING_RABBITMQ_HEARTBEAT"],
+		blocked_connection_timeout=app.config["BILLING_RABBITMQ_BLOCKED_CONNECTION_TIMEOUT"],
 	)
 
 
@@ -86,8 +88,10 @@ def consume_billing_queue(app: Any) -> None:
 	"""Consume billing messages forever, reconnecting if RabbitMQ is temporarily unavailable."""
 
 	queue_name = app.config["BILLING_RABBITMQ_QUEUE"]
+	reconnect_delay = app.config["BILLING_CONSUMER_RECONNECT_DELAY"]
 
 	while True:
+		connection: pika.BlockingConnection | None = None
 		try:
 			connection = pika.BlockingConnection(_connection_parameters(app))
 			channel = connection.channel()
@@ -100,12 +104,15 @@ def consume_billing_queue(app: Any) -> None:
 			channel.basic_consume(queue=queue_name, on_message_callback=_callback, auto_ack=False)
 			print(f"[billing-consumer] Waiting for messages on queue '{queue_name}'")
 			channel.start_consuming()
-		except (AMQPConnectionError, ChannelClosedByBroker) as exc:
-			print(f"[billing-consumer] RabbitMQ unavailable: {exc}. Retrying in 5 seconds...")
-			time.sleep(5)
+		except (AMQPConnectionError, ChannelClosedByBroker, AMQPChannelError, StreamLostError, AMQPError) as exc:
+			print(f"[billing-consumer] RabbitMQ unavailable: {exc}. Retrying in {reconnect_delay} seconds...")
+			time.sleep(reconnect_delay)
 		except KeyboardInterrupt:
 			print("[billing-consumer] Stopped by user")
 			break
+		finally:
+			if connection is not None and connection.is_open:
+				connection.close()
 
 
 def start_consumer_thread(app: Any) -> threading.Thread:
