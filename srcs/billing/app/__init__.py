@@ -1,15 +1,18 @@
 """Billing application factory."""
 
-from flask import Flask, jsonify
+from flask import Flask
 
 from .config import BillingConfig
-from .database import db
+from .database import db, init_database
 
 
 def create_app() -> Flask:
 	app = Flask(__name__)
 	app.config.from_mapping(BillingConfig.as_dict())
 	db.init_app(app)
+
+	with app.app_context():
+		init_database()
 
 	@app.get("/")
 	def home() -> tuple[dict[str, str], int]:

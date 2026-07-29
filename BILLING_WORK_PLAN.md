@@ -4,15 +4,15 @@ Use this checklist to finish the billing and RabbitMQ part of the project in a c
 
 ## Phase 1: Base setup
 
-- [ ] Confirm the environment variables needed for RabbitMQ and PostgreSQL.
-- [ ] Define the `billing_db` connection settings in `srcs/billing/app/config.py`.
-- [ ] Verify the billing service starts cleanly with `python server.py`.
+- [X] Confirm the environment variables needed for RabbitMQ and PostgreSQL.
+- [X] Define the `billing_db` connection settings in `srcs/billing/app/config.py`.
+- [X] Verify the billing service starts cleanly with `python server.py`.
 
 ## Phase 2: Database layer
 
-- [ ] Create or validate the `orders` table schema.
-- [ ] Add the model or persistence logic for inserting new billing orders.
-- [ ] Make sure database connection errors are handled clearly.
+- [x] Create or validate the `orders` table schema.
+- [x] Add the model or persistence logic for inserting new billing orders.
+- [x] Make sure database connection errors are handled clearly.
 
 ## Phase 3: RabbitMQ consumer
 
