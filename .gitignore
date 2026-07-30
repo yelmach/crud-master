@@ -1,7 +1,11 @@
 venv/
 .venv/
+
 __pycache__/
 *.py[cod]
 .pytest_cache/
 *.db
 .
+explain.md
+BILLING_TEST_PLAN.md
+/.vagrant
