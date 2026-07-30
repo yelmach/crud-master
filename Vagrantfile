@@ -33,4 +33,26 @@ Vagrant.configure("2") do |config|
       env: env_vars,
       sensitive: true
   end
+
+  config.vm.define "gateway-vm" do |gateway|
+    gateway.vm.box = "ubuntu/jammy64"
+    gateway.vm.hostname = "gateway-vm"
+
+    gateway.vm.network "private_network", ip: "192.168.56.10"
+    gateway.vm.network "forwarded_port",
+      guest: env_vars["GATEWAY_PORT"].to_i,
+      host: env_vars["GATEWAY_PORT"].to_i,
+      host_ip: "127.0.0.1"
+
+    gateway.vm.provider "virtualbox" do |virtualbox|
+      virtualbox.name = "crud-master-gateway"
+      virtualbox.memory = 1024
+      virtualbox.cpus = 1
+    end
+
+    gateway.vm.provision "shell",
+      path: "scripts/setup_gateway.sh",
+      env: env_vars,
+      sensitive: true
+  end
 end
