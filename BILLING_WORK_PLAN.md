@@ -30,10 +30,10 @@ Use this checklist to finish the billing and RabbitMQ part of the project in a c
 
 ## Phase 5: Gateway integration
 
-- [ ] Implement `POST /api/billing` in the gateway.
-- [ ] Publish the request body to RabbitMQ without blocking the client.
-- [ ] Return a success response as soon as the message is queued.
-- [ ] Make sure the gateway still accepts requests even if the billing service is stopped.
+- [x] Implement `POST /api/billing` in the gateway.
+- [x] Publish the request body to RabbitMQ without blocking the client.
+- [x] Return a success response as soon as the message is queued.
+- [x] Make sure the gateway still accepts requests even if the billing service is stopped.
 
 ## Phase 6: Testing
 
@@ -44,9 +44,9 @@ Use this checklist to finish the billing and RabbitMQ part of the project in a c
 
 ## Phase 7: Documentation
 
-- [ ] Document the RabbitMQ queue name, database name, and required ports.
-- [ ] Note the manual test steps used during development.
-- [ ] Keep any billing-specific instructions separate from the main README if needed.
+- [x] Document the RabbitMQ queue name, database name, and required ports.
+- [x] Note the manual test steps used during development.
+- [x] Keep any billing-specific instructions separate from the main README if needed.
 
 ## Suggested order
 

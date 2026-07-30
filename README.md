@@ -1,153 +1,162 @@
-# crud-master
+# CRUD Master Py
 
-## Recommended division
+CRUD Master Py is a small microservices project with three parts:
 
-### Yelmach
+- an Inventory API for movie CRUD operations
+- a Billing API that consumes RabbitMQ messages and stores orders in PostgreSQL
+- an API Gateway that proxies movie requests over HTTP and queues billing requests through RabbitMQ
 
-#### 1. Inventory service
+## Stack
 
-Implement:
+- Python 3
+- Flask
+- SQLAlchemy and Flask-SQLAlchemy
+- PostgreSQL
+- RabbitMQ
+- Vagrant
+- PM2
 
-* PostgreSQL `movies_db`
-* Movie model and table
-* All movie CRUD endpoints
-* Search/filter by title
-* Validation and HTTP error handling
-
-#### 2. Gateway inventory routing
-
-Implement Gateway routes for:
-
-```text
-/api/movies
-/api/movies/<id>
-```
-
-The Gateway should forward:
-
-* HTTP method
-* JSON body
-* Query parameters
-* Status code
-* Response body
-
-#### 3. Vagrant infrastructure
-
-After agreeing on ports, service names and environment variables, create:
-
-* `gateway-vm`
-* `inventory-vm`
-* `billing-vm`
-* Private network IPs
-* Provisioning scripts
-* Environment-variable injection
-* PM2 startup configuration
-
-You can start the `Vagrantfile` early, but finish provisioning after both applications are stable.
-
----
-
-### Azzouzi
-
-#### 1. Billing service
-
-Implement:
-
-* PostgreSQL `billing_db`
-* Orders table
-* RabbitMQ consumer
-* JSON validation
-* Database insertion
-* Manual message acknowledgement
-
-#### 2. RabbitMQ
-
-Configure:
-
-* Durable `billing_queue`
-* Persistent messages
-* User and password
-* Access from the Gateway VM
-* Reconnection after service restart
-
-#### 3. Gateway billing routing
-
-Implement:
+## Repository layout
 
 ```text
-POST /api/billing
+.
+├── openapi.yaml
+├── README.md
+├── Vagrantfile
+├── .env
+├── scripts/
+│   ├── setup_billing.sh
+│   ├── setup_gateway.sh
+│   └── setup_inventory.sh
+└── srcs/
+    ├── billing/
+    ├── gateway/
+    └── inventory/
 ```
 
-This route should publish the order to RabbitMQ and return immediately.
+## Gateway API
 
-This is a logical assignment because your teammate owns both sides of the billing flow:
+The gateway exposes:
 
-```text
-Gateway producer → RabbitMQ → Billing consumer
+- `GET /api/movies`
+- `POST /api/movies`
+- `DELETE /api/movies`
+- `GET /api/movies/<id>`
+- `PUT /api/movies/<id>`
+- `DELETE /api/movies/<id>`
+- `POST /api/billing`
+
+The full contract is documented in [openapi.yaml](openapi.yaml).
+
+## Environment variables
+
+The project uses the root [.env](.env) file. The important values are:
+
+- `GATEWAY_HOST`
+- `GATEWAY_PORT`
+- `INVENTORY_API_URL`
+- `BILLING_DB_HOST`
+- `BILLING_DB_PORT`
+- `BILLING_DB_NAME`
+- `BILLING_DB_USER`
+- `BILLING_DB_PASSWORD`
+- `BILLING_RABBITMQ_HOST`
+- `BILLING_RABBITMQ_PORT`
+- `BILLING_RABBITMQ_USER`
+- `BILLING_RABBITMQ_PASSWORD`
+- `BILLING_RABBITMQ_QUEUE`
+
+## Run the billing service locally
+
+From the billing folder:
+
+```bash
+cd srcs/billing
+python3 -m pip install -r requirements.txt
+python3 server.py
 ```
 
-#### 4. Testing and documentation
+The billing service runs on the host and port defined in [.env](.env).
 
-Prepare:
+## Run the billing VM
 
-* Postman collection
-* OpenAPI specification
-* README
-* Endpoint tests
-* RabbitMQ resilience test
-* Clean installation instructions
+From the project root:
 
-## Best parallel workflow
-
-### Phase 1 — Work independently
-
-**Yelmach**
-
-```text
-Inventory API
-Gateway movie proxy
-Basic Vagrantfile
+```bash
+vagrant up billing-vm
+vagrant ssh billing-vm
 ```
 
-**Azzouzi**
+The billing VM installs PostgreSQL, RabbitMQ, Python dependencies, and PM2.
 
-```text
-Billing consumer
-RabbitMQ setup
-Gateway billing producer
+## Test the billing API
+
+Inside `billing-vm`:
+
+```bash
+sudo pm2 list
+curl http://127.0.0.1:5001/health
 ```
 
-### Phase 2 — Integration
+To publish a billing message directly to RabbitMQ:
 
-Merge both Gateway parts carefully:
+```bash
+python3 - <<'PY'
+import json
+import pika
 
-```text
-Gateway
-├── Movie routes
-└── Billing route
+connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+channel = connection.channel()
+channel.queue_declare(queue='billing_queue', durable=True)
+channel.basic_publish(
+    exchange='',
+    routing_key='billing_queue',
+    body=json.dumps({
+        'user_id': '20',
+        'number_of_items': '99',
+        'total_amount': '250'
+    }),
+    properties=pika.BasicProperties(delivery_mode=2),
+)
+connection.close()
+PY
 ```
 
-Avoid both editing the same main Gateway file. Separate routes into modules:
+Then check PostgreSQL:
 
-```text
-gateway/
-├── app.py
-├── routes/
-│   ├── inventory_routes.py
-│   └── billing_routes.py
-└── services/
-    ├── inventory_client.py
-    └── rabbitmq_publisher.py
+```bash
+sudo -u postgres psql -d billing_db -c "SELECT * FROM orders;"
 ```
 
-This reduces Git conflicts.
+## Test the gateway billing route
 
-### Phase 3 — Infrastructure and testing
+When `POST /api/billing` is implemented and the gateway is running:
 
-**Yelmach** finish VM provisioning while **Azzouzi** prepares tests and documentation.
+```bash
+curl -X POST http://127.0.0.1:8000/api/billing \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":"20","number_of_items":"99","total_amount":"250"}'
+```
 
-Test the entire project from a clean environment.
+Expected response:
 
-## One important thing
+```json
+{"message":"Message posted"}
+```
 
-Each person should test their own implementation first
+## Vagrant and PM2 notes
+
+- `vagrant reload` reboots the VM, but it does not rerun provisioning.
+- Use `vagrant provision billing-vm` or `vagrant reload --provision billing-vm` after changing the setup script.
+- Inside the VM, PM2 commands are:
+
+```bash
+sudo pm2 list
+sudo pm2 stop billing-app
+sudo pm2 start billing-app
+```
+
+## Documentation files
+
+- Gateway OpenAPI spec: [openapi.yaml](openapi.yaml)
+

@@ -30,7 +30,7 @@ File.readlines(ENV_FILE).each do |line|
 end
 
 Vagrant.configure("2") do |config|
-  config.vm.define "inventory-vm" do |inventory|
+  co nfig.vm.define "inventory-vm" do |inventory|
     inventory.vm.box = "ubuntu/jammy64"
     inventory.vm.hostname = "inventory-vm"
 
@@ -41,7 +41,7 @@ Vagrant.configure("2") do |config|
       host_ip: "127.0.0.1"
 
     inventory.vm.provider "virtualbox" do |virtualbox|
-      virtualbox.name = "crud-master-inventory"
+      virtualbox.name = "inventory-vm"
       virtualbox.memory = 1024
       virtualbox.cpus = 1
     end
@@ -63,7 +63,7 @@ Vagrant.configure("2") do |config|
       host_ip: "127.0.0.1"
 
     gateway.vm.provider "virtualbox" do |virtualbox|
-      virtualbox.name = "crud-master-gateway"
+      virtualbox.name = "gateway-vm"
       virtualbox.memory = 1024
       virtualbox.cpus = 1
     end
