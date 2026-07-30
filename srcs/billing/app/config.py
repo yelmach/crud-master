@@ -24,11 +24,11 @@ def _bool_env(name: str, default: str = "false") -> bool:
 
 
 def build_postgres_uri() -> str:
-	user = os.getenv("BILLING_DB_USER", "billing_user")
-	password = os.getenv("BILLING_DB_PASSWORD", "billing_password")
-	host = os.getenv("BILLING_DB_HOST", "localhost")
-	port = os.getenv("BILLING_DB_PORT", "5432")
-	database = os.getenv("BILLING_DB_NAME", "billing_db")
+	user = os.getenv("BILLING_DB_USER")
+	password = os.getenv("BILLING_DB_PASSWORD")
+	host = os.getenv("BILLING_DB_HOST")
+	port = os.getenv("BILLING_DB_PORT")
+	database = os.getenv("BILLING_DB_NAME")
 	return f"postgresql://{user}:{password}@{host}:{port}/{database}"
 
 
@@ -38,22 +38,22 @@ class BillingConfig:
 	@staticmethod
 	def as_dict() -> dict[str, object]:
 		return {
-			"DEBUG": _bool_env("BILLING_DEBUG", "false"),
-			"TESTING": _bool_env("BILLING_TESTING", "false"),
+			"DEBUG": _bool_env("BILLING_DEBUG"),
+			"TESTING": _bool_env("BILLING_TESTING"),
 			"JSON_SORT_KEYS": False,
-			"SQLALCHEMY_DATABASE_URI": os.getenv("BILLING_DATABASE_URI", build_postgres_uri()),
+			"SQLALCHEMY_DATABASE_URI":  build_postgres_uri(),
 			"SQLALCHEMY_TRACK_MODIFICATIONS": False,
-			"BILLING_RABBITMQ_HOST": os.getenv("BILLING_RABBITMQ_HOST", "localhost"),
-			"BILLING_RABBITMQ_PORT": int(os.getenv("BILLING_RABBITMQ_PORT", "5672")),
-			"BILLING_RABBITMQ_USER": os.getenv("BILLING_RABBITMQ_USER", "guest"),
-			"BILLING_RABBITMQ_PASSWORD": os.getenv("BILLING_RABBITMQ_PASSWORD", "guest"),
-			"BILLING_RABBITMQ_QUEUE": os.getenv("BILLING_RABBITMQ_QUEUE", "billing_queue"),
-			"BILLING_RABBITMQ_HEARTBEAT": int(os.getenv("BILLING_RABBITMQ_HEARTBEAT", "30")),
+			"BILLING_RABBITMQ_HOST": os.getenv("BILLING_RABBITMQ_HOST"),
+			"BILLING_RABBITMQ_PORT": int(os.getenv("BILLING_RABBITMQ_PORT")),
+			"BILLING_RABBITMQ_USER": os.getenv("BILLING_RABBITMQ_USER"),
+			"BILLING_RABBITMQ_PASSWORD": os.getenv("BILLING_RABBITMQ_PASSWORD"),
+			"BILLING_RABBITMQ_QUEUE": os.getenv("BILLING_RABBITMQ_QUEUE"),
+			"BILLING_RABBITMQ_HEARTBEAT": int(os.getenv("BILLING_RABBITMQ_HEARTBEAT")),
 			"BILLING_RABBITMQ_BLOCKED_CONNECTION_TIMEOUT": int(
-				os.getenv("BILLING_RABBITMQ_BLOCKED_CONNECTION_TIMEOUT", "30")
+				os.getenv("BILLING_RABBITMQ_BLOCKED_CONNECTION_TIMEOUT")
 			),
-			"BILLING_CONSUMER_RECONNECT_DELAY": int(os.getenv("BILLING_CONSUMER_RECONNECT_DELAY", "5")),
-			"BILLING_HOST": os.getenv("BILLING_HOST", "0.0.0.0"),
-			"BILLING_PORT": int(os.getenv("BILLING_PORT", "5001")),
+			"BILLING_CONSUMER_RECONNECT_DELAY": int(os.getenv("BILLING_CONSUMER_RECONNECT_DELAY")),
+			"BILLING_HOST": os.getenv("BILLING_HOST"),
+			"BILLING_PORT": int(os.getenv("BILLING_PORT")),
 		}
 
