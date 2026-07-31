@@ -37,8 +37,12 @@ Vagrant.configure("2") do |config|
   config.vm.define "billing-vm" do |billing|
 		billing.vm.box = "ubuntu/jammy64"
 		billing.vm.hostname = "billing-vm"
+    
 		billing.vm.network "private_network", ip: "192.168.56.12"
-		billing.vm.network "forwarded_port", guest: 5001, host: 5001, auto_correct: true
+		billing.vm.network "forwarded_port",
+      guest: env_vars["BILLING_PORT"].to_i,
+      host: env_vars["BILLING_PORT"].to_i,
+      auto_correct: true
 
 		billing.vm.synced_folder ".", "/vagrant", type: "virtualbox"
 
@@ -48,7 +52,10 @@ Vagrant.configure("2") do |config|
 			vb.cpus = 2
 		end
 
-		billing.vm.provision "shell", path: "scripts/setup_billing.sh", privileged: true
+		billing.vm.provision "shell",
+			path: "scripts/setup_billing.sh",
+			env: env_vars,
+			privileged: true
 	end
 
   config.vm.define "gateway-vm" do |gateway|

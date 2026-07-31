@@ -8,6 +8,9 @@ APP_NAME="billing-app"
 VENV_DIR="${APP_DIR}/venv"
 PM2_SERVICE_FILE="/etc/systemd/system/billing-pm2.service"
 
+: "${BILLING_RABBITMQ_USER:?BILLING_RABBITMQ_USER is required}"
+: "${BILLING_RABBITMQ_PASSWORD:?BILLING_RABBITMQ_PASSWORD is required}"
+
 sudo apt-get update
 sudo apt-get install -y curl gnupg2 ca-certificates lsb-release apt-transport-https software-properties-common python3 python3-venv python3-pip postgresql postgresql-contrib rabbitmq-server
 
@@ -23,6 +26,9 @@ sudo systemctl enable postgresql
 sudo systemctl start postgresql
 sudo systemctl enable rabbitmq-server
 sudo systemctl start rabbitmq-server
+
+sudo rabbitmqctl add_user "${BILLING_RABBITMQ_USER}" "${BILLING_RABBITMQ_PASSWORD}"
+sudo rabbitmqctl set_permissions -p / "${BILLING_RABBITMQ_USER}" '.*' '.*' '.*'
 
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'billing_db'" | grep -q 1 || sudo -u postgres createdb billing_db
 sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname = 'billing_user'" | grep -q 1 || sudo -u postgres psql -c "CREATE USER billing_user WITH PASSWORD 'billing_password';"
