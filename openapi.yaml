@@ -1,0 +1,218 @@
+openapi: 3.0.3
+info:
+  title: CRUD Master Gateway API
+  version: 1.0.0
+  description: |
+    API Gateway for the CRUD Master project.
+
+    The gateway exposes two responsibilities:
+    - Proxy movie CRUD requests to the Inventory API over HTTP.
+    - Accept billing requests and publish them to RabbitMQ for the Billing API.
+
+servers:
+  - url: http://localhost:8000
+    description: Local gateway instance
+
+tags:
+  - name: Inventory
+    description: Movie CRUD proxy endpoints
+  - name: Billing
+    description: Billing message publishing endpoint
+
+paths:
+  /api/movies:
+    get:
+      tags:
+        - Inventory
+      summary: Get all movies
+      description: Forwards the request to the Inventory API and returns the exact response.
+      parameters:
+        - in: query
+          name: title
+          schema:
+            type: string
+          description: Optional substring filter applied by the Inventory API.
+      responses:
+        '200':
+          description: Movies returned successfully.
+        '503':
+          description: Inventory service unavailable.
+    post:
+      tags:
+        - Inventory
+      summary: Create a movie
+      description: Forwards the request body to the Inventory API.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovieInput'
+      responses:
+        '201':
+          description: Movie created successfully.
+        '400':
+          description: Invalid request body.
+        '503':
+          description: Inventory service unavailable.
+    delete:
+      tags:
+        - Inventory
+      summary: Delete all movies
+      description: Forwards the request to the Inventory API.
+      responses:
+        '200':
+          description: Movies deleted successfully.
+        '503':
+          description: Inventory service unavailable.
+
+  /api/movies/{movie_id}:
+    get:
+      tags:
+        - Inventory
+      summary: Get a movie by id
+      description: Forwards the request to the Inventory API and returns the exact response.
+      parameters:
+        - in: path
+          name: movie_id
+          required: true
+          schema:
+            type: integer
+          description: Movie identifier.
+      responses:
+        '200':
+          description: Movie returned successfully.
+        '404':
+          description: Movie not found.
+        '503':
+          description: Inventory service unavailable.
+    put:
+      tags:
+        - Inventory
+      summary: Update a movie by id
+      description: Forwards the request body to the Inventory API.
+      parameters:
+        - in: path
+          name: movie_id
+          required: true
+          schema:
+            type: integer
+          description: Movie identifier.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovieInput'
+      responses:
+        '200':
+          description: Movie updated successfully.
+        '404':
+          description: Movie not found.
+        '503':
+          description: Inventory service unavailable.
+    delete:
+      tags:
+        - Inventory
+      summary: Delete a movie by id
+      description: Forwards the request to the Inventory API.
+      parameters:
+        - in: path
+          name: movie_id
+          required: true
+          schema:
+            type: integer
+          description: Movie identifier.
+      responses:
+        '200':
+          description: Movie deleted successfully.
+        '404':
+          description: Movie not found.
+        '503':
+          description: Inventory service unavailable.
+
+  /api/billing:
+    post:
+      tags:
+        - Billing
+      summary: Queue a billing order
+      description: |
+        Accepts a JSON billing payload and publishes it to RabbitMQ.
+        The gateway returns immediately after the message is queued, even if the Billing API is stopped.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillingInput'
+            examples:
+              sampleOrder:
+                value:
+                  user_id: "20"
+                  number_of_items: "99"
+                  total_amount: "250"
+      responses:
+        '200':
+          description: Message successfully posted to RabbitMQ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '400':
+          description: Invalid JSON body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '503':
+          description: Billing queue unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+
+components:
+  schemas:
+    MovieInput:
+      type: object
+      required:
+        - title
+        - description
+      properties:
+        title:
+          type: string
+          example: Interstellar
+        description:
+          type: string
+          example: A team travels through a wormhole to save humanity.
+
+    BillingInput:
+      type: object
+      required:
+        - user_id
+        - number_of_items
+        - total_amount
+      properties:
+        user_id:
+          type: string
+          example: "20"
+        number_of_items:
+          type: string
+          example: "99"
+        total_amount:
+          type: string
+          example: "250"
+
+    SuccessMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Message posted
+
+    ErrorMessage:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Billing queue is currently unavailable
