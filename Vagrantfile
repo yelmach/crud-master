@@ -1,21 +1,3 @@
-Vagrant.configure("2") do |config|
-	config.vm.define "billing-vm" do |billing|
-		billing.vm.box = "ubuntu/jammy64"
-		billing.vm.hostname = "billing-vm"
-		billing.vm.network "private_network", ip: "192.168.56.12"
-		billing.vm.network "forwarded_port", guest: 5001, host: 5001, auto_correct: true
-
-		billing.vm.synced_folder ".", "/vagrant", type: "virtualbox"
-
-		billing.vm.provider "virtualbox" do |vb|
-			vb.name = "billing-vm"
-			vb.memory = 2048
-			vb.cpus = 2
-		end
-
-		billing.vm.provision "shell", path: "scripts/setup_billing.sh", privileged: true
-	end
-end
 ENV_FILE = File.expand_path(".env", __dir__)
 
 abort "Missing .env file at #{ENV_FILE}" unless File.file?(ENV_FILE)
@@ -30,7 +12,7 @@ File.readlines(ENV_FILE).each do |line|
 end
 
 Vagrant.configure("2") do |config|
-  co nfig.vm.define "inventory-vm" do |inventory|
+  config.vm.define "inventory-vm" do |inventory|
     inventory.vm.box = "ubuntu/jammy64"
     inventory.vm.hostname = "inventory-vm"
 
@@ -51,6 +33,23 @@ Vagrant.configure("2") do |config|
       env: env_vars,
       sensitive: true
   end
+
+  config.vm.define "billing-vm" do |billing|
+		billing.vm.box = "ubuntu/jammy64"
+		billing.vm.hostname = "billing-vm"
+		billing.vm.network "private_network", ip: "192.168.56.12"
+		billing.vm.network "forwarded_port", guest: 5001, host: 5001, auto_correct: true
+
+		billing.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+
+		billing.vm.provider "virtualbox" do |vb|
+			vb.name = "billing-vm"
+			vb.memory = 2048
+			vb.cpus = 2
+		end
+
+		billing.vm.provision "shell", path: "scripts/setup_billing.sh", privileged: true
+	end
 
   config.vm.define "gateway-vm" do |gateway|
     gateway.vm.box = "ubuntu/jammy64"
