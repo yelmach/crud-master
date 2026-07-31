@@ -38,15 +38,18 @@ def parse_message_body(body: bytes) -> dict[str, Any]:
 def validate_payload(payload: dict[str, Any]) -> None:
 	"""Validate that all required billing fields are present and non-empty."""
 
-	missing_fields = [field for field in REQUIRED_FIELDS if field not in payload]
+	missing_fields = []
+	for field in REQUIRED_FIELDS:
+		if field not in payload:
+			missing_fields.append(field)
 	if missing_fields:
 		raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 
-	empty_fields = [
-		field
-		for field in REQUIRED_FIELDS
-		if payload[field] is None or (isinstance(payload[field], str) and payload[field].strip() == "")
-	]
+	empty_fields = []
+	for field in REQUIRED_FIELDS:
+		value = payload[field]
+		if value is None or (isinstance(value, str) and value.strip() == ""):
+			empty_fields.append(field)
 	if empty_fields:
 		raise ValueError(f"Required fields cannot be empty: {', '.join(empty_fields)}")
 
