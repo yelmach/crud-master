@@ -1,0 +1,26 @@
+gateway_vm_addr: '192.168.56.10'
+inventory_vm_addr: '192.168.56.20'
+billing_vm_addr: '192.168.56.30'
+
+# virtual machines resources
+billing_vm_cpu: 1
+inventory_vm_cpu: 1
+gateway_vm_cpu: 1
+billing_vm_memory: 2048
+inventory_vm_memory: 1024
+gateway_vm_memory: 1024
+
+# virtual machine names
+billing_vm: 'billing-vm'
+inventory_vm: 'inventory-vm'
+gateway_vm: 'gateway-vm'
+
+# applications path inside the repo folder
+billing_app_src: './srcs/billing-app'
+inventory_app_src: './srcs/inventory-app'
+gateway_app_src: './srcs/api-gateway-app'
+
+# applications path inside the virtual machine
+billing_app_path: '/apps/billing-app'
+inventory_app_path: '/apps/inventory-app'
+gateway_app_path: '/apps/api-gateway-app'
