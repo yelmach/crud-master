@@ -26,8 +26,6 @@ def callback(ch, method, properties, body):
 		ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 def start_consuming(app):
-    time.sleep(5)
-    
     credentials = pika.PlainCredentials(
         app.config['RABBITMQ_USER'], 
         app.config['RABBITMQ_PASSWORD']

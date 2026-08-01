@@ -2,8 +2,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv()
 
 class Config:
     INVENTORY_HOST = os.getenv("INVENTORY_HOST")

@@ -1,73 +1,49 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
-export DEBIAN_FRONTEND=noninteractive
+set -e
 
-APP_DIR="/vagrant/srcs/billing"
-APP_NAME="billing-app"
-VENV_DIR="${APP_DIR}/venv"
-PM2_SERVICE_FILE="/etc/systemd/system/billing-pm2.service"
+: "${BILLING_DB_NAME:?BILLING_DB_NAME is required}"
+: "${BILLING_DB_USER:?BILLING_DB_USER is required}"
+: "${BILLING_DB_PASSWORD:?BILLING_DB_PASSWORD is required}"
+: "${RABBITMQ_USER:?RABBITMQ_USER is required}"
+: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}"
 
-: "${BILLING_RABBITMQ_USER:?BILLING_RABBITMQ_USER is required}"
-: "${BILLING_RABBITMQ_PASSWORD:?BILLING_RABBITMQ_PASSWORD is required}"
+APP_DIR="/apps/billing-app"
 
-sudo apt-get update
-sudo apt-get install -y curl gnupg2 ca-certificates lsb-release apt-transport-https software-properties-common python3 python3-venv python3-pip postgresql postgresql-contrib rabbitmq-server
+echo "======================================== 1. Updating OS and installing dependencies"
+apt-get update -y
+apt-get install -y python3 python3-pip python3-venv postgresql postgresql-contrib curl rabbitmq-server
 
-if ! command -v node >/dev/null 2>&1; then
-	curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-	sudo apt-get install -y nodejs
-fi
 
-sudo npm install -g pm2
-PM2_BIN="$(command -v pm2)"
+echo "======================================== 2. Installing Node.js and PM2"
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+apt-get install -y nodejs
+npm install -g pm2
 
-sudo systemctl enable postgresql
-sudo systemctl start postgresql
-sudo systemctl enable rabbitmq-server
-sudo systemctl start rabbitmq-server
 
-sudo rabbitmqctl add_user "${BILLING_RABBITMQ_USER}" "${BILLING_RABBITMQ_PASSWORD}"
-sudo rabbitmqctl set_permissions -p / "${BILLING_RABBITMQ_USER}" '.*' '.*' '.*'
+echo "======================================== 3. Configuring PostgreSQL"
+sudo -u postgres psql -c "CREATE USER ${BILLING_DB_USER} WITH PASSWORD '${BILLING_DB_PASSWORD}';"
+sudo -u postgres psql -c "CREATE DATABASE ${BILLING_DB_NAME} OWNER ${BILLING_DB_USER};"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${BILLING_DB_NAME} TO ${BILLING_DB_USER};"
 
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'billing_db'" | grep -q 1 || sudo -u postgres createdb billing_db
-sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname = 'billing_user'" | grep -q 1 || sudo -u postgres psql -c "CREATE USER billing_user WITH PASSWORD 'billing_password';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE billing_db TO billing_user;"
-sudo -u postgres psql -d billing_db -c "GRANT ALL ON SCHEMA public TO billing_user;"
 
-cd "${APP_DIR}"
-python3 -m venv "${VENV_DIR}"
-"${VENV_DIR}/bin/pip" install --upgrade pip
-"${VENV_DIR}/bin/pip" install -r requirements.txt
+echo "======================================== 4. Configuring RabbitMQ"
+systemctl enable rabbitmq-server
+systemctl start rabbitmq-server
+rabbitmqctl add_user ${RABBITMQ_USER} ${RABBITMQ_PASSWORD} || true
+rabbitmqctl set_permissions -p / ${RABBITMQ_USER} ".*" ".*" ".*"
 
-if "${PM2_BIN}" describe "${APP_NAME}" >/dev/null 2>&1; then
-	"${PM2_BIN}" delete "${APP_NAME}" || true
-fi
 
-"${PM2_BIN}" start "${VENV_DIR}/bin/python3" --name "${APP_NAME}" --cwd "${APP_DIR}" -- server.py
-"${PM2_BIN}" save
+echo "======================================== 5. Setting up the Python Application"
+cd $APP_DIR
+cp /vagrant/.env $APP_DIR/.env
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
-cat > "${PM2_SERVICE_FILE}" <<EOF
-[Unit]
-Description=PM2 service for billing app
-After=network-online.target postgresql.service rabbitmq-server.service
-Wants=network-online.target
 
-[Service]
-Type=forking
-User=root
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-Environment=PM2_HOME=/root/.pm2
-PIDFile=/root/.pm2/pm2.pid
-ExecStart=${PM2_BIN} resurrect
-ExecReload=${PM2_BIN} reload all
-ExecStop=${PM2_BIN} kill
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable billing-pm2.service
-systemctl restart billing-pm2.service
+echo "======================================== 6. Starting the Application with PM2"
+pm2 start server.py --name billing-app --interpreter ./venv/bin/python
+pm2 startup
+pm2 save

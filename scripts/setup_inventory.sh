@@ -6,31 +6,35 @@ set -e
 : "${INVENTORY_DB_USER:?INVENTORY_DB_USER is required}"
 : "${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD is required}"
 
-echo "Updating system packages..."
-apt-get update -y
+APP_DIR="/apps/inventory-app"
 
-echo "Installing Python, pip, venv, and PostgreSQL..."
+echo "======================================== 1. Updating OS and installing dependencies"
+apt-get update -y
 apt-get install -y python3 python3-pip python3-venv postgresql postgresql-contrib curl
 
-echo "Installing modern Node.js and PM2..."
+
+echo "======================================== 2. Installing Node.js and PM2"
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 apt-get install -y nodejs
-sudo npm install -g pm2
+npm install -g pm2
 
-echo "Configuring PostgreSQL..."
-sudo -u postgres psql << EOF
-CREATE DATABASE ${INVENTORY_DB_NAME};
-CREATE USER ${INVENTORY_DB_USER} WITH PASSWORD '${INVENTORY_DB_PASSWORD}';
-GRANT ALL PRIVILEGES ON DATABASE ${INVENTORY_DB_NAME} TO ${INVENTORY_DB_USER};
-EOF
 
-echo "Setting up Python virtual environment directory..."
-cd /vagrant/srcs/inventory
-rm -rf .venv
-python3 -m venv .venv
-source ./.venv/bin/activate
+echo "======================================== 3. Configuring PostgreSQL"
+sudo -u postgres psql -c "CREATE USER ${INVENTORY_DB_USER} WITH PASSWORD '${INVENTORY_DB_PASSWORD}';"
+sudo -u postgres psql -c "CREATE DATABASE ${INVENTORY_DB_NAME} OWNER ${INVENTORY_DB_USER};"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${INVENTORY_DB_NAME} TO ${INVENTORY_DB_USER};"
+
+
+echo "======================================== 4. Setting up the Python Application"
+cd $APP_DIR
+cp /vagrant/.env $APP_DIR/.env
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 
-pm2 start server.py --name inventory-app --interpreter .venv/bin/python
+
+echo "======================================== 5. Starting the Application with PM2"
+pm2 start server.py --name inventory-app --interpreter ./venv/bin/python
 pm2 startup
 pm2 save
